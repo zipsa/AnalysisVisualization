@@ -1,0 +1,68 @@
+---
+title: "TaqMan qPCR Visualization"
+author: "Hyun Yong Jin"
+date: "Jul 20, 2019"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+
+```{r Norm}
+
+#Heatmap with linear value
+
+a <- read.csv("N005-2-plate2_renorm.csv", header=T, stringsAsFactors = FALSE) #Tibble is not recommended. it seems like header is terated differently. 
+
+library(tidyverse)
+a <- mutate_all(a, funs(replace(., .=='#VALUE!', NA))) #Assign 0.01 or NA for undetected values
+
+
+#convert log value table to numeric matrix to generate heatmap for coloring purpose
+rnames <- a[,1] #Import genenames into rnames
+mat_data <- data.matrix(a[,2:ncol(a)])
+#mat_data <-round(mat_data,2)
+rownames(mat_data) <- rnames
+
+
+
+library(RColorBrewer)
+my_palette <- colorRampPalette(c("black","blue4","blue", "gray92", "yellow", "orange", "red"))(n = 299)
+
+library(gplots)
+
+heatmap.2(log2(mat_data),      #Color representation is based on log value
+         dendrogram = "none",
+         density.info="none",  # turns off density plot inside color legend
+         margins =c(14,5),     # widens margins around plot
+         trace="none",
+         scale="none",  #Fix values and do not re-normalize it.
+         cellnote=ifelse(mat_data==1, NA, round(mat_data,2)), #Want to put numbers in the cells
+         notecol= "black",
+         notecex=0.7,
+         Rowv =FALSE,
+         Colv = FALSE,
+         col=my_palette,
+         colsep=0:ncol(mat_data),
+         rowsep=0:nrow(mat_data),
+         sepcolor=c("black"),
+         sepwidth=c(0.03, 0.03),
+         cexCol= 0.8, #To reduce Column text
+         cexRow=0.8,
+         main = "N005-2 aCD3/aCD28 plate +/-NOTCH lgands No DAPT", # heat map title
+         xlab = "Conditions",
+         ylab = "Relative expression normalized to Actb probe"
+          )
+    
+
+
+#Save as 10x8
+
+
+dev.off()
+
+
+```
+
+
