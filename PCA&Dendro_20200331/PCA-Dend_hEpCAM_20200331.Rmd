@@ -1,0 +1,125 @@
+---
+title: "PCA & Dendrogram -hEPCAM in B6 with CTX treatment"
+author: "Hyun Yong Jin"
+date: "March 31, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## PCA & hcluster analysis
+### Started from my previous script analyzing dupilumab treatment data, GSE59284
+### Reference <https://cran.r-project.org/web/packages/ggfortify/vignettes/plot_pca.html>
+### Started from log2 transforemd /RMA normalized data.frame, treat each probes (not genes) as individual data point. Categorize each CEL files based on two critereia - treatment vs. non-treatment and lesional vs. non leasional.
+### Library used for PCA calculation - library(ggfortify)
+
+
+```{r}
+library(dplyr)
+
+a <- read.csv("norm_data_log_hEpCAM_20190213.csv", header = T) #by default, row.names=NULL is included. duplicated header has assigned with each numbers which we dont want. 
+
+
+mat.dat <-data.matrix(a[,3:ncol(a)]) 
+str(mat.dat) #Make sure 120 samples
+
+t.mat.dat <-t(mat.dat) #Transposed matrix #Row names are now unique sample. After converting to data.frame, need to add a new colume with identifier and cateory.
+
+
+#Assigning a new row (category) for subsetting
+b <- as.data.frame(t.mat.dat) #Converting back to data.frame. 
+c<- read.csv("cluster.csv", header = T)
+d <- cbind(b, c) #Header will be preserved. The bound columnes will be located at the very right. 
+
+
+#Sanity test
+d[,770:773] #Combined coloums
+d[,1:3] #Data is ready!
+
+df <- d[c(1:770)] #Select columns with numeric values for calculation. 
+
+#Drawing PCA plot
+library(ggfortify)
+
+autoplot(prcomp(df)) #Works as expected
+
+#Three categories: All, Tissue, Day
+autoplot(prcomp(df), data=d, colour='All', label=FALSE) + theme (panel.background = element_rect(fill='white', colour='black'))#Subsetting is based on the column info under 'cetegory and labeling is based on rownames. 
+
+#Coloring by Tissue
+autoplot(prcomp(df), data=d, colour='Tissue', label=FALSE) + theme (panel.background = element_rect(fill='white', colour='black'))#Subsetting is based on the column info under 'cetegory and labeling is based on rownames. 
+
+#Coloring by treatment days
+autoplot(prcomp(df), data=d, colour='Day', label=FALSE) + theme (panel.background = element_rect(fill='white', colour='black'))#Subsetting is based on the column info under 'cetegory and labeling is based on rownames. 
+
+
+
+```
+
+
+
+```{r}
+#hClustering analysis from the transposed matrix
+clusters <- hclust(dist(df), method="complete") 
+#Default it complete-linkage. This calculates the maximum distance between clusters before merging.
+plot(clusters)
+
+
+#Advanced vidualisation
+library(dendextend)
+dend <- as.dendrogram(clusters)
+dend <- color_branches(dend, k=4) #Visualize data assuming there are 4 clusters.
+
+#Change Labeling based on added column. combine phenotype and GSM.
+labels(dend) <- paste(as.character(d[,771])[order.dendrogram(dend)],"(",labels(dend),")", sep = "") 
+dend <- hang.dendrogram(dend,hang_height=0.1) # Hang the dendrogrm
+
+
+plot(dend, 
+     main= "dendtogram",
+     horiz = TRUE)
+
+
+
+
+#Other dendrogram options
+
+clusters.cen <- hclust(dist(df), method='centroid') #Centroid-linkage
+plot(clusters.cen)
+# finds centroid of cluster 1 and centroid of cluster 2, and then calculates the distance between the two before merging.
+
+dend.cen <- as.dendrogram(clusters.cen)
+dend.cen <- color_branches(dend.cen, k=4) #Visualize data assuming there are 4 clusters.
+
+#Change Labeling based on added column. combine phenotype and GSM.
+labels(dend.cen) <- paste(as.character(d[,771])[order.dendrogram(dend.cen)],"(",labels(dend.cen),")", sep = "") 
+dend.cen <- hang.dendrogram(dend.cen,hang_height=0.1) # Hang the dendrogrm
+
+plot(dend.cen, 
+     main= "Centeroid-linkage",
+     horiz = TRUE)
+
+
+
+
+clusters.sin <- hclust(dist(df), method='single') #Single-linkage
+plot(clusters.sin)
+# Single linkage calculates the minimum distance between the clusters before merging. This linkage may be used to detect high values in your dataset which may be outliers as they will be merged at the end.
+
+dend.sin <- as.dendrogram(clusters.sin)
+dend.sin <- color_branches(dend.sin, k=4) #Visualize data assuming there are 4 clusters.
+
+#Change Labeling based on added column. combine phenotype and GSM.
+labels(dend.sin) <- paste(as.character(d[,771])[order.dendrogram(dend.sin)],"(",labels(dend.sin),")", sep = "") 
+dend.sin <- hang.dendrogram(dend.sin,hang_height=0.1) # Hang the dendrogrm
+
+plot(dend.sin, 
+     main= "Single linkage",
+     horiz = TRUE)
+
+
+```
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
